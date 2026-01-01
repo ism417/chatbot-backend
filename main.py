@@ -6,13 +6,14 @@ import json
 from dotenv import load_dotenv
 from groq import Groq
 from upstash_redis import Redis
-from upstash_vector import Index
 import PyPDF2
 from io import BytesIO
-from sentence_transformers import SentenceTransformer
 from typing import Optional, List
 from uuid import uuid4
 from jose import jwt, JWTError
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 
 load_dotenv()
 
@@ -32,16 +33,6 @@ redis = Redis(
     url=os.getenv("UPSTASH_REDIS_REST_URL"),
     token=os.getenv("UPSTASH_REDIS_REST_TOKEN")
 )
-
-
-# Connect to Upstash Vector
-vector_index = Index(
-    url=os.getenv("UPSTASH_VECTOR_REST_URL"),
-    token=os.getenv("UPSTASH_VECTOR_REST_TOKEN")
-)
-
-# Initialize embedding model
-embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
 
 TTL_SECONDS = 86400  # 24 hours
 
@@ -131,23 +122,8 @@ async def upload_document(file: UploadFile = File(...)):
 
         #Creat document id
         doc_id = f"{file.filename.replace(' ', '_').replace('.', '_')}_{uuid4().hex}"
-        #Create embeddings and upload to upstash Vector
-        for i, chunk in enumerate(chunks):
-            embedding = embedding_model.encode(chunk).tolist()
-
-            #Store in  Upstash and Vector with metadata
-            vector_index.upsert(
-                vectors=[{
-                    "id": f"{doc_id}_chunk_{i}",
-                    "vector" : embedding,
-                    "metadata" : {
-                        "document_id" : doc_id,
-                        "chunks_index" : i,
-                        "text" : chunk,
-                        "filename" : file.filename
-                    }
-                }]
-            )
+        # Store all chunks for this document in Redis as a JSON list
+        redis.set(f"chunks:{doc_id}", json.dumps(chunks))
         doc_info = {
             "id" : doc_id,
             "filename" : file.filename,
@@ -204,20 +180,30 @@ async def chat(data: ChatMessage, user_id: str = Depends(get_current_user)):
         context = None
         if data.document_id:
             #create embedding for the question 
-            question_embedding = embedding_model.encode(data.message).tolist()
+            # Load chunks for the requested document
+            chunks_json = redis.get(f"chunks:{data.document_id}")
+            if not chunks_json:
+                context = None
+            else:
+                chunks = json.loads(chunks_json)
+                if not chunks:
+                    context = None
+                else:
+                    # Compute TF-IDF on document chunks and the question
+                    vectorizer = TfidfVectorizer().fit(chunks)
+                    chunks_matrix = vectorizer.transform(chunks)             # shape: (n_chunks, n_features)
+                    query_vec = vectorizer.transform([data.message])         # shape: (1, n_features)
+                    # cosine similarity between query and each chunk
+                    sims = cosine_similarity(query_vec, chunks_matrix).flatten()
+                    # pick top-k most similar chunks
+                    top_k = 3
+                    top_indices = np.argsort(sims)[-top_k:][::-1]
+                    retrieved_chunks = [chunks[i] for i in top_indices if sims[i] > 0]
+                    if retrieved_chunks:
+                        context = "\n\n".join(retrieved_chunks)
+                    else:
+                        context = None
 
-            #search upstash vectopr for relevant chunks
-            results = vector_index.query(
-                vector = question_embedding,
-                top_k=3,
-                include_metadata=True,
-                filter=f"document_id = '{data.document_id}'"
-            )
-
-            #extract text from results
-            if results:
-                retrieved_chunks = [item.metadata['text'] for item in results]
-                context = "\n\n".join(retrieved_chunks)
         #build messages for groq
         groq_messages = []
         
@@ -297,11 +283,8 @@ async def delete_document(document_id: str):
         # Delete vectors from Upstash Vector
         # Note: Upstash Vector doesn't have bulk delete by prefix yet
         # So we delete each chunk individually
-        for i in range(doc_info['chunks_count']):
-            try:
-                vector_index.delete(ids=[f"{document_id}_chunk_{i}"])
-            except:
-                pass
+        # Delete stored chunks from Redis
+        redis.delete(f"chunks:{document_id}")
         
         # Delete from Redis
         redis.delete(f"doc:{document_id}")

@@ -3,9 +3,9 @@ python-dotenv
 groq
 upstash-redis
 pydantic
-sentence-transformers
 pypdf2
-upstash-vector
 python-multipart
 python-jose
 uvicorn
+scikit-learn
+numpy
