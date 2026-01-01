@@ -57,6 +57,14 @@ def get_user_id_from_jwt(token: str):
     except JWTError:
         return None
 
+@app.get("/")
+async def root():
+    return {
+        "message": "Chatbot API is running",
+        "docs": "/docs",
+        "health": "/health"
+    }
+
 @app.get("/get-token")
 def get_token():
     user_id = str(uuid4())
