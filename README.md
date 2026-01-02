@@ -2,6 +2,11 @@
 
 A FastAPI-based chatbot backend with RAG (Retrieval-Augmented Generation) capabilities, powered by Groq's LLaMA 3.3 70B model and Upstash Redis for conversation persistence.
 
+## Live Demo
+
+🚀 **Backend**: Hosted on [Render](https://render.com)  
+🌐 **Frontend**: Deployed on [Vercel](https://vercel.com) - **[www.Raglet.live](https://www.Raglet.live)**
+
 ## Features
 
 - 🤖 **AI-Powered Chat** - Uses Groq's LLaMA 3.3 70B model for intelligent responses
