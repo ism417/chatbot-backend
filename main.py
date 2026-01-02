@@ -87,7 +87,11 @@ def get_conversation(session_id: str):
 
 
 def save_conversation(session_id: str, messages: list):
-    redis.setex(f"chat:{session_id}", TTL_SECONDS, json.dumps(messages))
+    key = f"chat:{session_id}"
+    if redis.exists(key):
+        redis.set(key,json.dumps(messages), keepttl=True)
+    else:
+        redis.setex(key, TTL_SECONDS, json.dumps(messages))
 
 def extract_text_from_pdf(file_bytes):
     """Extract text from pdf"""
