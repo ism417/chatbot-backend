@@ -337,28 +337,3 @@ MIT
 
 A FastAPI-based chatbot backend with RAG (Retrieval-Augmented Generation) capabilities, powered by Groq's LLaMA 3.3 70B model and Upstash Redis for conversation persistence.
 
-## Features
-
-- 🤖 **AI-Powered Chat** - Uses Groq's LLaMA 3.3 70B model for intelligent responses
-- 📄 **Document Upload** - Upload PDF and TXT files for context-aware conversations
-- 🔍 **RAG Search** - TF-IDF based retrieval for relevant document chunks
-- 💾 **Conversation History** - Persistent chat history stored in Upstash Redi (24-hour TTL)
-- 🔐 **JWT Authentication** - Secure token-based user identification
-- 🌐 **CORS Enabled** - Ready for frontend integration
-
-## Tech Stack
-
-- **Framework**: FastAPI
-- **AI Model**: Groq (LLaMA 3.3 70B Versatile)
-- **Database**: Upstash Redis
-- **PDF Processing**: PyPDF2
-- **Text Search**: scikit-learn (TF-IDF + Cosine Similarity)
-- **Authentication**: python-jose (JWT)
-
-## Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd chatbot-backend
-   ```
