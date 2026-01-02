@@ -8,7 +8,7 @@ from groq import Groq
 from upstash_redis import Redis
 import PyPDF2
 from io import BytesIO
-from typing import Optional, List
+from typing import Optional
 from uuid import uuid4
 from jose import jwt, JWTError
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -38,13 +38,9 @@ TTL_SECONDS = 86400  # 24 hours
 
 class ChatMessage(BaseModel):
     message: str
-    session_id: str = "default"  # Default session if not provided
     document_id: Optional[str] = None
 
-class ClearChat(BaseModel):
-    session_id: str = "default"
-
-SECRET_KEY = "yaFAWKKMmjwYG9YU5fHxmnz4xDecCrOmlTSlkXu47eM="  # Use a secure random string!
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")  # Use a secure random string!
 ALGORITHM = "HS256"
 
 def create_jwt(user_id: str):
