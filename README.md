@@ -341,4 +341,3 @@ requests.delete(f"{BASE_URL}/document/{document_id}")
 MIT
 
 A FastAPI-based chatbot backend with RAG (Retrieval-Augmented Generation) capabilities, powered by Groq's LLaMA 3.3 70B model and Upstash Redis for conversation persistence.
-
